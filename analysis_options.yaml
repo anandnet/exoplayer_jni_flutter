@@ -1,0 +1,9 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - lib/src/exoplayer.g.dart   # generated file — skip linting
+
+linter:
+  rules:
+    avoid_print: false

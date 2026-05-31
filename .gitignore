@@ -1,0 +1,30 @@
+# Dart/Flutter
+.dart_tool/
+.packages
+.pub/
+build/
+*.lock
+
+# Generated JNI bindings — regenerate with: dart run tool/jnigen.dart
+lib/src/exoplayer.g.dart
+
+# Android
+*.iml
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.gradle
+local.properties
+.idea/
+*.hprof
+android/.gradle
+android/local.properties
+android/captures
+android/.externalNativeBuild
+android/.cxx
+android/key.properties
+
+# JNI build artifacts
+build/jni_libs/

@@ -1,0 +1,23 @@
+name: exoplayer_jni_example
+description: Demonstrates the exoplayer_jni plugin — full ExoPlayer via JNIgen.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+  flutter: ">=3.19.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  exoplayer_jni:
+    path: ../
+  jni: ^1.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
