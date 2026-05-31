@@ -98,11 +98,11 @@ No MethodChannel, no serialization — every Dart call is a direct JNI call.
 
 ```yaml
 dependencies:
-  exoplayer_jni: ^0.1.0
+  audio_player_jni:
+    git:
+      url: https://github.com/anandnet/exoplayer_jni.git
+      ref: main
 ```
-
-> `jni` and `jni_flutter` are transitive dependencies — they are pulled in
-> automatically. You do not need to add them manually.
 
 ### 2. Android permissions
 
