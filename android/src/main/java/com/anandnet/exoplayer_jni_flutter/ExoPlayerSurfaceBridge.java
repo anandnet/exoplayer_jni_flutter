@@ -1,4 +1,4 @@
-package com.example.exoplayer_jni;
+package com.anandnet.exoplayer_jni_flutter;
 
 import android.view.Surface;
 import io.flutter.view.TextureRegistry;

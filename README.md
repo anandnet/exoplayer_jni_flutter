@@ -1,4 +1,4 @@
-# exoplayer_jni
+# exoplayer_jni_flutter
 
 A Flutter plugin that exposes the **full Media3 ExoPlayer API** from Dart via **JNIgen-generated bindings** — no MethodChannel, no serialization overhead, just direct JNI calls.
 
@@ -83,7 +83,7 @@ ExoPlayerController
 
 No MethodChannel, no serialization — every Dart call is a direct JNI call.
 
-| | exoplayer_jni | MethodChannel players |
+| | exoplayer_jni_flutter | MethodChannel players |
 |---|---|---|
 | Serialization | None — Dart holds JNI references | JSON per call |
 | API coverage | Full ExoPlayer API | Only what the plugin author wrapped |
@@ -98,7 +98,7 @@ No MethodChannel, no serialization — every Dart call is a direct JNI call.
 
 ```yaml
 dependencies:
-  exoplayer_jni:
+  exoplayer_jni_flutter:
     git:
       url: https://github.com/anandnet/exoplayer_jni_flutter.git
       ref: main
@@ -124,7 +124,7 @@ Add to `android/app/src/main/AndroidManifest.xml`:
 ### Option A: Drop-in widget (simplest)
 
 ```dart
-import 'package:exoplayer_jni/exoplayer_jni.dart';
+import 'package:exoplayer_jni_flutter/exoplayer_jni_flutter.dart';
 
 // Paste this anywhere in your widget tree.
 // The widget creates and owns its own controller internally.
@@ -683,11 +683,11 @@ final selector = ctrl.rawTrackSelector;
 ## Project structure
 
 ```
-exoplayer_jni/
+exoplayer_jni_flutter/
 ├── tool/
 │   └── jnigen.dart                      # JNIgen config (replaces jnigen.yaml)
 ├── lib/
-│   ├── exoplayer_jni.dart               # Public API re-exports
+│   ├── exoplayer_jni_flutter.dart       # Public API re-exports
 │   └── src/
 │       ├── exoplayer.g.dart             # GENERATED — dart run tool/jnigen.dart
 │       ├── exoplayer_controller.dart    # High-level Dart wrapper (main API)
@@ -732,7 +732,7 @@ exoplayer_jni/
 Run `flutter build apk` inside `example/` first to download Gradle dependencies,
 then retry `dart run tool/jnigen.dart`.
 
-**`Failed to load dynamic library 'libexoplayer_jni.so'`**  
+**`Failed to load dynamic library 'libexoplayer_jni_flutter.so'`**  
 Run `dart run jni:setup` in the project root to build the JNI native bridge.
 
 **Player stuck on spinner after hot restart**  

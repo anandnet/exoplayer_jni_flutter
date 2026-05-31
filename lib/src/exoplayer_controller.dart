@@ -423,7 +423,7 @@ class ExoPlayerController extends ChangeNotifier {
   static void _initBridgeIds() {
     if (_bridgeClass != null) return;
     _bridgeClass =
-        JClass.forName('com/example/exoplayer_jni/ExoPlayerSurfaceBridge');
+        JClass.forName('com/anandnet/exoplayer_jni_flutter/ExoPlayerSurfaceBridge');
     // createAndClaimTexture(): creates a fresh SurfaceProducer on the main
     // thread and returns its texture ID.  Must be called via _runOnMainThread.
     _createAndClaimTextureMethod =

@@ -12,7 +12,7 @@ import 'dart:ui' show FrameTiming;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:exoplayer_jni/exoplayer_jni.dart';
+import 'package:exoplayer_jni_flutter/exoplayer_jni_flutter.dart';
 
 import '../shared/constants.dart';
 

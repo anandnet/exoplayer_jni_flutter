@@ -3,14 +3,14 @@
 ///
 /// Usage:
 /// ```dart
-/// import 'package:exoplayer_jni/exoplayer_jni.dart';
+/// import 'package:exoplayer_jni_flutter/exoplayer_jni_flutter.dart';
 ///
 /// final player = ExoPlayerController();
 /// await player.init(context);
 /// player.setMediaUrl('https://example.com/video.mp4');
 /// player.play();
 /// ```
-library exoplayer_jni;
+library exoplayer_jni_flutter;
 
 export 'src/exoplayer_controller.dart';
 export 'src/exoplayer_view.dart';

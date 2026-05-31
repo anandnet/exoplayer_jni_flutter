@@ -16,9 +16,9 @@ public final class GeneratedPluginRegistrant {
   private static final String TAG = "GeneratedPluginRegistrant";
   public static void registerWith(@NonNull FlutterEngine flutterEngine) {
     try {
-      flutterEngine.getPlugins().add(new com.example.exoplayer_jni.ExoplayerJniPlugin());
+      flutterEngine.getPlugins().add(new com.anandnet.exoplayer_jni_flutter.ExoplayerJniPlugin());
     } catch (Exception e) {
-      Log.e(TAG, "Error registering plugin exoplayer_jni, com.example.exoplayer_jni.ExoplayerJniPlugin", e);
+      Log.e(TAG, "Error registering plugin exoplayer_jni_flutter, com.anandnet.exoplayer_jni_flutter.ExoplayerJniPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new com.github.dart_lang.jni.JniPlugin());

@@ -1,12 +1,12 @@
 // android/build.gradle  —  ExoPlayer JNI plugin
-group 'com.example.exoplayer_jni'
+group 'com.anandnet.exoplayer_jni_flutter'
 version '1.0'
 
 apply plugin: 'com.android.library'
 
 android {
     compileSdk 35
-    namespace 'com.example.exoplayer_jni'
+    namespace 'com.anandnet.exoplayer_jni_flutter'
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

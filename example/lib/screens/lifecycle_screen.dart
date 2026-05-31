@@ -6,7 +6,7 @@
 library;
 
 import 'package:flutter/material.dart' hide RepeatMode;
-import 'package:exoplayer_jni/exoplayer_jni.dart';
+import 'package:exoplayer_jni_flutter/exoplayer_jni_flutter.dart';
 
 import '../shared/constants.dart';
 
