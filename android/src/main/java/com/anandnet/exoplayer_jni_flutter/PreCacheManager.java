@@ -1,5 +1,6 @@
 package com.anandnet.exoplayer_jni_flutter;
 
+import android.content.Context;
 import android.net.Uri;
 
 import androidx.media3.common.C;
@@ -8,6 +9,7 @@ import androidx.media3.datasource.DefaultHttpDataSource;
 import androidx.media3.datasource.cache.CacheDataSource;
 import androidx.media3.datasource.cache.CacheWriter;
 import androidx.media3.datasource.cache.SimpleCache;
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -67,6 +69,27 @@ public final class PreCacheManager {
         });
 
         activeTasks.put(url, task);
+    }
+
+    /**
+     * Creates a {@link DefaultMediaSourceFactory} that reads from {@code cache} first,
+     * falling back to the network via {@link DefaultHttpDataSource}.
+     *
+     * <p>Pass the returned factory to {@code ExoPlayer.Builder.setMediaSourceFactory()} so
+     * that ExoPlayer consumes data written by {@link #preCacheUrl} instead of re-downloading.
+     *
+     * @param context Android context (used to initialise the default extractor registry).
+     * @param cache   The {@link SimpleCache} to read from / write to.
+     * @return A configured {@link DefaultMediaSourceFactory}.
+     */
+    public static DefaultMediaSourceFactory createCachedMediaSourceFactory(
+            Context context, SimpleCache cache) {
+        CacheDataSource.Factory cacheDataSourceFactory = new CacheDataSource.Factory()
+                .setCache(cache)
+                .setUpstreamDataSourceFactory(new DefaultHttpDataSource.Factory())
+                .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR);
+        return new DefaultMediaSourceFactory(context)
+                .setDataSourceFactory(cacheDataSourceFactory);
     }
 
     /**

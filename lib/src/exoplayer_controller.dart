@@ -243,13 +243,34 @@ class ExoPlayerController extends ChangeNotifier {
       }
 
       // ── Build ExoPlayer ──────────────────────────────────────────────────
+      // When a cache is active, create a DefaultMediaSourceFactory wired to
+      // the SimpleCache so ExoPlayer reads pre-cached bytes during playback.
+      JObject? mediaSourceFactory;
+      if (_sharedCache != null) {
+        try {
+          _initPreCacheManagerIds();
+          mediaSourceFactory =
+              _createCachedMediaSourceFactoryMethod!.call<JObject, JObject>(
+            _preCacheManagerClass!,
+            JObject.type,
+            [context, _sharedCache!],
+          );
+        } catch (_) {
+          // Best-effort — proceed without cache-backed factory if it fails.
+        }
+      }
+
       // setLooper pins ExoPlayer to the Android main looper so all internal
       // state machine transitions happen on the correct thread.
       _player = ExoPlayer$Builder(context)
           .setTrackSelector(_trackSelector!)
           ?.setLoadControl(loadControl)
+          ?.let((b) => mediaSourceFactory != null
+              ? b.setMediaSourceFactory(mediaSourceFactory)
+              : b)
           ?.setLooper(Looper.mainLooper)
           ?.build();
+      mediaSourceFactory?.release();
 
       // ── Attach listener ───────────────────────────────────────────────────
       _listener = _buildListener();
@@ -485,6 +506,22 @@ class ExoPlayerController extends ChangeNotifier {
   static JStaticMethodId? _disposeTextureMethod;
   static JStaticMethodId? _getSurfaceMethod;
   static JStaticMethodId? _consumeSurfaceRefreshMethod;
+
+  // ── PreCacheManager raw JNI (no regen needed) ─────────────────────────────
+  static JClass? _preCacheManagerClass;
+  static JStaticMethodId? _createCachedMediaSourceFactoryMethod;
+
+  static void _initPreCacheManagerIds() {
+    if (_preCacheManagerClass != null) return;
+    _preCacheManagerClass = JClass.forName(
+        'com/anandnet/exoplayer_jni_flutter/PreCacheManager');
+    _createCachedMediaSourceFactoryMethod =
+        _preCacheManagerClass!.staticMethodId(
+      'createCachedMediaSourceFactory',
+      '(Landroid/content/Context;Landroidx/media3/datasource/cache/SimpleCache;)'
+          'Landroidx/media3/exoplayer/source/DefaultMediaSourceFactory;',
+    );
+  }
 
   static void _initBridgeIds() {
     if (_bridgeClass != null) return;
