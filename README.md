@@ -717,7 +717,7 @@ exoplayer_jni_flutter/
 
 | Requirement | Minimum |
 |---|---|
-| Flutter | 3.19.0 |
+| Flutter | 3.22.0 |
 | Dart | 3.3.0 |
 | Android minSdk | 21 (Android 5.0) |
 | JDK | 17 |

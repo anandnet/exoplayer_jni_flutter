@@ -79,7 +79,7 @@ public final class ExoPlayerSurfaceBridge {
         sProducers.put(id, p);
         p.setCallback(new TextureRegistry.SurfaceProducer.Callback() {
             @Override
-            public void onSurfaceDestroyed() {
+            public void onSurfaceCleanup() {
                 // Surface going away (app backgrounded under Impeller).
                 synchronized (ExoPlayerSurfaceBridge.class) {
                     sSurfaceRefreshed.remove(id);
