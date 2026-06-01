@@ -25,6 +25,7 @@ Works for both **video** and **audio-only** playback with a single unified API.
 8. [DRM-protected content](#drm-protected-content)
 9. [Track selection](#track-selection)
 10. [Caching](#caching)
+    - [Auto pre-caching for playlists](#auto-pre-caching-for-playlists)
 11. [Buffer tuning](#buffer-tuning)
 12. [Error handling](#error-handling)
 13. [Raw JNI access](#raw-jni-access)
@@ -483,13 +484,34 @@ ListenableBuilder(
 ## MediaItem builder
 
 Use `MediaItemBuilder` to construct a `MediaItem` with full metadata and options.
+Two styles are supported — pick whichever suits your code better.
+
+### Constructor style (all-at-once)
+
+```dart
+final item = MediaItemBuilder(
+  uri: 'https://example.com/video.mp4',    // required
+  title: 'My Video',
+  artist: 'Artist Name',
+  album: 'Album Title',
+  mimeType: 'video/mp4',                   // optional — ExoPlayer auto-detects
+  drmConfig: DrmConfig.widevine(
+    licenseUrl: 'https://license.example.com/widevine',
+    headers: {'Authorization': 'Bearer <token>'},
+  ),
+  clipStart: const Duration(seconds: 10),  // play only a segment
+  clipEnd: const Duration(seconds: 60),
+).build();
+```
+
+### Fluent style (chained setters)
 
 ```dart
 final item = MediaItemBuilder()
     .setUri('https://example.com/video.mp4')    // required
     .setTitle('My Video')
     .setArtist('Artist Name')
-    .setAlbum('Album Title')
+    .setAlbum('Album Title')                    // alias for setAlbumTitle()
     .setMimeType('video/mp4')                   // optional — ExoPlayer auto-detects
     .setDrmConfig(DrmConfig.widevine(
       licenseUrl: 'https://license.example.com/widevine',
@@ -500,7 +522,12 @@ final item = MediaItemBuilder()
       const Duration(seconds: 60),
     )
     .build();
+```
 
+Both styles are interchangeable — you can also mix them (constructor sets defaults,
+fluent setters override).
+
+```dart
 ctrl.setMediaItem(item);           // single item
 ctrl.setPlaylist([item1, item2]);  // or a playlist
 ```
@@ -569,7 +596,7 @@ to `init()`. All controller instances in the same process share one cache.
 
 ```dart
 await ctrl.init(
-  cacheConfig: CacheConfig(
+  cacheConfig: const CacheConfig(
     maxBytes: 500 * 1024 * 1024,  // 500 MB cap
     // cacheDirectory: Directory('/custom/path'), // defaults to app cache dir
   ),
@@ -586,6 +613,30 @@ await ctrl.init(); // cacheConfig defaults to CacheConfig.none
 > Android JVM still holds the `SimpleCache` directory lock. The plugin handles this
 > automatically — if creation fails it falls back to uncached playback without
 > crashing. A cold restart (stop + relaunch) always clears the lock.
+
+### Auto pre-caching for playlists
+
+When playing a playlist, the controller can silently download the first N MB of
+upcoming items in the background so that track transitions feel instantaneous.
+
+```dart
+await ctrl.init(
+  cacheConfig: const CacheConfig(maxBytes: 300 * 1024 * 1024),
+  autoPrecache: true,
+  autoPrecacheAhead: 2,                       // download 2 items ahead
+  autoPrecacheBytesPerItem: 5 * 1024 * 1024,  // 5 MB per item
+);
+ctrl.setPlaylistUrls(urls);  // background-downloads items 1 & 2 immediately
+```
+
+| `init()` param | Default | Description |
+|---|---|---|
+| `autoPrecache` | `false` | Enable/disable auto pre-caching |
+| `autoPrecacheAhead` | `2` | Items ahead of current to download |
+| `autoPrecacheBytesPerItem` | `3 MB` | Max bytes per item (0 = entire file) |
+
+> **Note:** Auto pre-caching only applies when `setPlaylistUrls()` is used.
+> `setPlaylist()` (which takes pre-built `MediaItem` objects) does not trigger it.
 
 ---
 

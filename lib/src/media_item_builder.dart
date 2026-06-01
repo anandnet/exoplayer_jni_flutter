@@ -6,14 +6,27 @@ import 'drm_config.dart';
 
 /// Fluent Dart builder that constructs a [MediaItem] JNI object.
 ///
-/// The underlying [MediaItem.Builder] class (and its [MediaMetadata.Builder])
-/// are called through the JNIgen-generated bindings in exoplayer.g.dart.
+/// Supports two styles — constructor-based (all-at-once) and fluent (chained
+/// setters). Both styles can be combined freely.
 ///
-/// Example:
+/// **Constructor style:**
+/// ```dart
+/// final item = MediaItemBuilder(
+///   uri: 'https://example.com/video.mp4',
+///   title: 'My Video',
+///   artist: 'Artist Name',
+///   album: 'Album Title',
+///   mimeType: 'video/mp4',
+///   drmConfig: DrmConfig.widevine(licenseUrl: 'https://lic.example.com'),
+///   clipStart: const Duration(seconds: 10),
+///   clipEnd: const Duration(seconds: 60),
+/// ).build();
+/// ```
+///
+/// **Fluent style:**
 /// ```dart
 /// final item = MediaItemBuilder()
 ///     .setUri('https://example.com/video.mp4')
-///     .setMimeType('video/mp4')
 ///     .setTitle('My Video')
 ///     .setArtist('Some Artist')
 ///     .setDrmConfig(widevineConfig)
@@ -31,6 +44,34 @@ class MediaItemBuilder {
   final Map<String, String> _httpHeaders = {};
   Duration? _clipStart;
   Duration? _clipEnd;
+
+  /// Creates a [MediaItemBuilder] with optional initial values.
+  ///
+  /// Any field left null can be set later via the fluent setters.
+  MediaItemBuilder({
+    String? uri,
+    String? title,
+    String? artist,
+    String? album,
+    String? mimeType,
+    String? mediaId,
+    String? artworkUri,
+    DrmConfig? drmConfig,
+    Map<String, String>? httpHeaders,
+    Duration? clipStart,
+    Duration? clipEnd,
+  })  : _uri = uri,
+        _title = title,
+        _artist = artist,
+        _albumTitle = album,
+        _mimeType = mimeType,
+        _mediaId = mediaId,
+        _artworkUri = artworkUri,
+        _drmConfig = drmConfig,
+        _clipStart = clipStart,
+        _clipEnd = clipEnd {
+    if (httpHeaders != null) _httpHeaders.addAll(httpHeaders);
+  }
 
   MediaItemBuilder setUri(String uri) {
     _uri = uri;
@@ -61,6 +102,9 @@ class MediaItemBuilder {
     _albumTitle = album;
     return this;
   }
+
+  /// Alias for [setAlbumTitle].
+  MediaItemBuilder setAlbum(String album) => setAlbumTitle(album);
 
   MediaItemBuilder setArtworkUri(String uri) {
     _artworkUri = uri;
