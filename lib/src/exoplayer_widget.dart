@@ -422,12 +422,6 @@ class _Controls extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pos = controller.position;
-    final dur = controller.duration;
-    final progress = (dur > Duration.zero && !seeking)
-        ? pos.inMilliseconds / dur.inMilliseconds
-        : seekValue;
-
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -538,83 +532,104 @@ class _Controls extends StatelessWidget {
           ),
 
           // ── Bottom: seek bar + time + volume ──────────────────────────────
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Seek bar
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    activeTrackColor: theme.seekActiveColor,
-                    inactiveTrackColor: theme.seekInactiveColor,
-                    thumbColor: theme.seekThumbColor,
-                    overlayShape: SliderComponentShape.noOverlay,
-                    trackHeight: 3,
-                    thumbShape:
-                        const RoundSliderThumbShape(enabledThumbRadius: 5),
-                  ),
-                  child: Slider(
-                    value: progress.clamp(0.0, 1.0),
-                    onChangeStart: (v) {
-                      onUserInteraction();
-                      onSeekStart(v);
-                    },
-                    onChanged: (v) {
-                      onUserInteraction();
-                      onSeekChanged(v);
-                    },
-                    onChangeEnd: onSeekEnd,
-                  ),
-                ),
-                // Time row: pos | spacer | vol | duration
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      Text(
-                        _fmt(pos),
-                        style: TextStyle(color: theme.textColor, fontSize: 12),
-                      ),
-                      const Spacer(),
-                      Icon(
-                        controller.volume == 0
-                            ? Icons.volume_off
-                            : Icons.volume_up,
-                        color: theme.iconColor,
-                        size: 18,
-                      ),
-                      SizedBox(
-                        width: 80,
-                        child: SliderTheme(
-                          data: SliderTheme.of(context).copyWith(
-                            activeTrackColor: theme.seekActiveColor,
-                            inactiveTrackColor: theme.seekInactiveColor,
-                            thumbColor: theme.seekThumbColor,
-                            overlayShape: SliderComponentShape.noOverlay,
-                            trackHeight: 2,
-                            thumbShape: const RoundSliderThumbShape(
-                                enabledThumbRadius: 5),
-                          ),
-                          child: Slider(
-                            value: controller.volume,
-                            onChanged: (v) {
-                              onUserInteraction();
-                              controller.setVolume(v);
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _fmt(dur),
-                        style: TextStyle(color: theme.textColor, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          // StreamBuilder subscribes directly to positionStream so only this
+          // subtree rebuilds every 200 ms — the Texture and play button above
+          // are unaffected by position ticks.
+          StreamBuilder<PlayerPosition>(
+            stream: controller.positionStream,
+            initialData: PlayerPosition(
+              position: controller.position,
+              buffered: Duration.zero,
+              duration: controller.duration,
             ),
+            builder: (context, snap) {
+              final pp = snap.data!;
+              final pos = pp.position;
+              final dur = pp.duration;
+              final progress = (dur > Duration.zero && !seeking)
+                  ? pos.inMilliseconds / dur.inMilliseconds
+                  : seekValue;
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Seek bar
+                    SliderTheme(
+                      data: SliderTheme.of(context).copyWith(
+                        activeTrackColor: theme.seekActiveColor,
+                        inactiveTrackColor: theme.seekInactiveColor,
+                        thumbColor: theme.seekThumbColor,
+                        overlayShape: SliderComponentShape.noOverlay,
+                        trackHeight: 3,
+                        thumbShape:
+                            const RoundSliderThumbShape(enabledThumbRadius: 5),
+                      ),
+                      child: Slider(
+                        value: progress.clamp(0.0, 1.0),
+                        onChangeStart: (v) {
+                          onUserInteraction();
+                          onSeekStart(v);
+                        },
+                        onChanged: (v) {
+                          onUserInteraction();
+                          onSeekChanged(v);
+                        },
+                        onChangeEnd: onSeekEnd,
+                      ),
+                    ),
+                    // Time row: pos | spacer | vol | duration
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        children: [
+                          Text(
+                            _fmt(pos),
+                            style:
+                                TextStyle(color: theme.textColor, fontSize: 12),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            controller.volume == 0
+                                ? Icons.volume_off
+                                : Icons.volume_up,
+                            color: theme.iconColor,
+                            size: 18,
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: SliderTheme(
+                              data: SliderTheme.of(context).copyWith(
+                                activeTrackColor: theme.seekActiveColor,
+                                inactiveTrackColor: theme.seekInactiveColor,
+                                thumbColor: theme.seekThumbColor,
+                                overlayShape: SliderComponentShape.noOverlay,
+                                trackHeight: 2,
+                                thumbShape: const RoundSliderThumbShape(
+                                    enabledThumbRadius: 5),
+                              ),
+                              child: Slider(
+                                value: controller.volume,
+                                onChanged: (v) {
+                                  onUserInteraction();
+                                  controller.setVolume(v);
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            _fmt(dur),
+                            style:
+                                TextStyle(color: theme.textColor, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

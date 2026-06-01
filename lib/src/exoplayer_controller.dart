@@ -243,8 +243,8 @@ class ExoPlayerController extends ChangeNotifier {
       });
     }
 
-    // Start position polling at 500 ms intervals
-    _positionTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+    // Start position polling at 200 ms for a smooth seek bar
+    _positionTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       _pollPosition();
     });
 
