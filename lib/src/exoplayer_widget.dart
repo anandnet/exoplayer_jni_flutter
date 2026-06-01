@@ -125,6 +125,10 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget>
   StreamSubscription<ExoPlaybackException>? _errorSub;
   StreamSubscription<ExoPlayerState>? _stateSub;
 
+  // Listener registered on an external controller that isn't yet initialized.
+  // Removed as soon as init() fires notifyListeners() or on teardown.
+  VoidCallback? _pendingInitListener;
+
   @override
   void initState() {
     super.initState();
@@ -160,8 +164,21 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget>
 
   Future<void> _setup() async {
     if (widget.controller != null) {
-      // External — just listen for errors.
+      // External controller path.
       _ownsController = false;
+      if (!_ctrl.isInitialized) {
+        // init() hasn't completed yet — wait for the controller to fire
+        // notifyListeners() before attaching the texture.
+        _pendingInitListener = () {
+          if (_ctrl.isInitialized) {
+            _ctrl.removeListener(_pendingInitListener!);
+            _pendingInitListener = null;
+            if (mounted) _setup();
+          }
+        };
+        _ctrl.addListener(_pendingInitListener!);
+        return;
+      }
       _subscribeErrors(_ctrl);
       await _ctrl.attachTexture();
       if (mounted) setState(() {});
@@ -215,6 +232,13 @@ class _ExoPlayerWidgetState extends State<ExoPlayerWidget>
     _controlsHideTimer?.cancel();
     _errorSub?.cancel();
     _stateSub?.cancel();
+    if (_pendingInitListener != null) {
+      // Safe: widget.controller may have changed, so use _ctrl carefully.
+      // At teardown time widget.controller is still the old value.
+      (widget.controller ?? _internalController)
+          ?.removeListener(_pendingInitListener!);
+      _pendingInitListener = null;
+    }
     if (_ownsController) {
       _internalController?.dispose();
     }
