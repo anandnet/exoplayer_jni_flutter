@@ -118,6 +118,14 @@ class ExoPlayerController extends ChangeNotifier {
   // reference when it enters STATE_IDLE on error.
   bool _hadError = false;
 
+  // ── Auto pre-cache ────────────────────────────────────────────────────────
+  // Enabled via init(autoPrecache: true). Caches the next [_autoPrecacheAhead]
+  // items from [_playlistUrls] as playback advances.
+  bool _autoPrecache = false;
+  int _autoPrecacheAhead = 2;
+  int _autoPrecacheBytesPerItem = 3 * 1024 * 1024; // 3 MB default
+  List<String> _playlistUrls = const [];
+
   // ── JNI listener (stored so it can be removed before player release) ──────
   Player$Listener? _listener;
 
@@ -172,6 +180,18 @@ class ExoPlayerController extends ChangeNotifier {
     int maxBufferMs = 50000,
     int bufferForPlaybackMs = 1500,
     int bufferForPlaybackAfterRebufferMs = 5000,
+
+    /// Automatically pre-cache upcoming playlist items in the background.
+    /// Only effective when [cacheConfig] is not [CacheConfig.none].
+    bool autoPrecache = false,
+
+    /// Number of items ahead of the current position to pre-cache.
+    int autoPrecacheAhead = 2,
+
+    /// Maximum bytes to download per item. Defaults to 3 MB — enough to
+    /// eliminate the cold-start buffering delay on item transitions.
+    /// Pass 0 to cache the entire file (suitable for audio).
+    int autoPrecacheBytesPerItem = 3 * 1024 * 1024,
   }) async {
     if (_player != null) return;
 
@@ -243,6 +263,18 @@ class ExoPlayerController extends ChangeNotifier {
       });
     }
 
+    // Store pre-cache settings (only useful when cache is enabled).
+    if (autoPrecacheBytesPerItem < 0) {
+      throw ArgumentError.value(
+        autoPrecacheBytesPerItem,
+        'autoPrecacheBytesPerItem',
+        'Must be ≥ 0. Pass 0 to cache the entire file.',
+      );
+    }
+    _autoPrecache = autoPrecache && cacheConfig.maxBytes > 0;
+    _autoPrecacheAhead = autoPrecacheAhead;
+    _autoPrecacheBytesPerItem = autoPrecacheBytesPerItem;
+
     // Start position polling at 200 ms for a smooth seek bar
     _positionTimer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       _pollPosition();
@@ -262,8 +294,12 @@ class ExoPlayerController extends ChangeNotifier {
         .let((b) => drm != null ? b.setDrmConfig(drm) : b)
         .build();
     _runOnMainThread(() {
-      _player!.setMediaItem(item);
-      _player!.prepare$2();
+      try {
+        _player!.setMediaItem(item);
+        _player!.prepare$2();
+      } finally {
+        item.release(); // release Dart-side JNI global ref; Java side retains its own ref
+      }
     });
   }
 
@@ -291,6 +327,36 @@ class ExoPlayerController extends ChangeNotifier {
         jList.release(); // release JNI local ref after hand-off to ExoPlayer
       }
     });
+  }
+
+  /// Sets a playlist from a list of URL strings and optionally pre-caches
+  /// upcoming items automatically if [autoPrecache] was enabled in [init()].
+  ///
+  /// Equivalent to building [MediaItem]s manually and calling [setPlaylist],
+  /// but also stores the URL list so the auto pre-cache window can advance
+  /// as playback progresses.
+  void setPlaylistUrls(List<String> urls) {
+    _assertInitialized();
+    _playlistUrls = List.unmodifiable(urls);
+    final items =
+        urls.map((url) => MediaItemBuilder().setUri(url).build()).toList();
+    _runOnMainThread(() {
+      final jList = JArrayList<MediaItem>();
+      try {
+        for (final item in items) {
+          jList.add(item);
+        }
+        _player!.setMediaItems(jList);
+        _player!.prepare$2();
+      } finally {
+        jList.release();
+        // Release each Dart-side JNI global ref; Java retains its own refs.
+        for (final item in items) {
+          item.release();
+        }
+      }
+    });
+    _triggerPrecache(0);
   }
 
   /// Adds a [MediaItem] to the end of the current playlist.
@@ -422,8 +488,8 @@ class ExoPlayerController extends ChangeNotifier {
 
   static void _initBridgeIds() {
     if (_bridgeClass != null) return;
-    _bridgeClass =
-        JClass.forName('com/anandnet/exoplayer_jni_flutter/ExoPlayerSurfaceBridge');
+    _bridgeClass = JClass.forName(
+        'com/anandnet/exoplayer_jni_flutter/ExoPlayerSurfaceBridge');
     // createAndClaimTexture(): creates a fresh SurfaceProducer on the main
     // thread and returns its texture ID.  Must be called via _runOnMainThread.
     _createAndClaimTextureMethod =
@@ -628,6 +694,8 @@ class ExoPlayerController extends ChangeNotifier {
           _duration = Duration.zero;
           _position = Duration.zero;
           notifyListeners();
+          // Pre-cache the next window of items as playback advances.
+          _triggerPrecache(_currentMediaItemIndex);
         },
         onTracksChanged: (tracks) {},
         onMediaMetadataChanged: (metadata) {},
@@ -754,6 +822,30 @@ class ExoPlayerController extends ChangeNotifier {
     });
   }
 
+  // ── Auto pre-cache ────────────────────────────────────────────────────────
+
+  /// Fires background pre-cache tasks for [_autoPrecacheAhead] items after
+  /// [currentIndex] in [_playlistUrls]. Safe to call with an empty list.
+  void _triggerPrecache(int currentIndex) {
+    if (!_autoPrecache || _sharedCache == null || _playlistUrls.isEmpty) return;
+    // Capture the cache ref now so the lambda doesn't race with dispose().
+    final cache = _sharedCache!;
+    final end =
+        (currentIndex + _autoPrecacheAhead).clamp(0, _playlistUrls.length - 1);
+    for (int i = currentIndex + 1; i <= end; i++) {
+      final url = _playlistUrls[i];
+      _runOnMainThread(() {
+        if (_disposed) return;
+        final jUrl = url.toJString();
+        try {
+          PreCacheManager.preCacheUrl(cache, jUrl, _autoPrecacheBytesPerItem);
+        } finally {
+          jUrl.release(); // release Dart-side JNI ref after Java has taken its own copy
+        }
+      });
+    }
+  }
+
   // ── Dispose ───────────────────────────────────────────────────────────────
 
   @override
@@ -762,6 +854,11 @@ class ExoPlayerController extends ChangeNotifier {
     _positionTimer?.cancel();
     _surfaceRefreshTimer?.cancel();
     _surfaceRefreshTimer = null;
+    if (_autoPrecache) {
+      // Cancel any in-flight pre-cache tasks so we don't write into a cache
+      // that may be released below.
+      _runOnMainThread(() => PreCacheManager.cancelAll());
+    }
     // Capture IDs/refs before clearing them.
     final releasingId = _claimedTextureId;
     _textureId = null;

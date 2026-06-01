@@ -69236,3 +69236,107 @@ final class $UUID$Type$ extends jni$_.JType<UUID> {
   @core$_.override
   String get signature => r'Ljava/util/UUID;';
 }
+
+/// from: `com.anandnet.exoplayer_jni_flutter.PreCacheManager`
+extension type PreCacheManager._(jni$_.JObject _$this)
+    implements jni$_.JObject {
+  static final _class = jni$_.JClass.forName(
+      r'com/anandnet/exoplayer_jni_flutter/PreCacheManager');
+
+  /// The type which includes information such as the signature of this class.
+  static const jni$_.JType<PreCacheManager> type = $PreCacheManager$Type$();
+  static final _id_preCacheUrl = _class.staticMethodId(
+    r'preCacheUrl',
+    r'(Landroidx/media3/datasource/cache/SimpleCache;Ljava/lang/String;J)V',
+  );
+
+  static final _preCacheUrl = jni$_.ProtectedJniExtensions.lookup<
+          jni$_.NativeFunction<
+              jni$_.JThrowablePtr Function(
+                  jni$_.Pointer<jni$_.Void>,
+                  jni$_.JMethodIDPtr,
+                  jni$_.VarArgs<
+                      (
+                        jni$_.Pointer<jni$_.Void>,
+                        jni$_.Pointer<jni$_.Void>,
+                        jni$_.Int64
+                      )>)>>('globalEnv_CallStaticVoidMethod')
+      .asFunction<
+          jni$_.JThrowablePtr Function(
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr,
+              jni$_.Pointer<jni$_.Void>,
+              jni$_.Pointer<jni$_.Void>,
+              core$_.int)>();
+
+  /// from: `static public void preCacheUrl(androidx.media3.datasource.cache.SimpleCache simpleCache, java.lang.String string, long j)`
+  static void preCacheUrl(
+    SimpleCache? simpleCache,
+    jni$_.JString? string,
+    core$_.int j,
+  ) {
+    final _$simpleCache = simpleCache?.reference ?? jni$_.jNullReference;
+    final _$string = string?.reference ?? jni$_.jNullReference;
+    _preCacheUrl(_class.reference.pointer, _id_preCacheUrl.pointer,
+            _$simpleCache.pointer, _$string.pointer, j)
+        .check();
+  }
+
+  static final _id_cancelPreCache = _class.staticMethodId(
+    r'cancelPreCache',
+    r'(Ljava/lang/String;)V',
+  );
+
+  static final _cancelPreCache = jni$_.ProtectedJniExtensions.lookup<
+              jni$_.NativeFunction<
+                  jni$_.JThrowablePtr Function(
+                      jni$_.Pointer<jni$_.Void>,
+                      jni$_.JMethodIDPtr,
+                      jni$_.VarArgs<(jni$_.Pointer<jni$_.Void>,)>)>>(
+          'globalEnv_CallStaticVoidMethod')
+      .asFunction<
+          jni$_.JThrowablePtr Function(jni$_.Pointer<jni$_.Void>,
+              jni$_.JMethodIDPtr, jni$_.Pointer<jni$_.Void>)>();
+
+  /// from: `static public void cancelPreCache(java.lang.String string)`
+  static void cancelPreCache(
+    jni$_.JString? string,
+  ) {
+    final _$string = string?.reference ?? jni$_.jNullReference;
+    _cancelPreCache(_class.reference.pointer, _id_cancelPreCache.pointer,
+            _$string.pointer)
+        .check();
+  }
+
+  static final _id_cancelAll = _class.staticMethodId(
+    r'cancelAll',
+    r'()V',
+  );
+
+  static final _cancelAll = jni$_.ProtectedJniExtensions.lookup<
+          jni$_.NativeFunction<
+              jni$_.JThrowablePtr Function(
+                jni$_.Pointer<jni$_.Void>,
+                jni$_.JMethodIDPtr,
+              )>>('globalEnv_CallStaticVoidMethod')
+      .asFunction<
+          jni$_.JThrowablePtr Function(
+            jni$_.Pointer<jni$_.Void>,
+            jni$_.JMethodIDPtr,
+          )>();
+
+  /// from: `static public void cancelAll()`
+  static void cancelAll() {
+    _cancelAll(_class.reference.pointer, _id_cancelAll.pointer).check();
+  }
+}
+
+final class $PreCacheManager$Type$ extends jni$_.JType<PreCacheManager> {
+  @jni$_.internal
+  const $PreCacheManager$Type$();
+
+  @jni$_.internal
+  @core$_.override
+  String get signature =>
+      r'Lcom/anandnet/exoplayer_jni_flutter/PreCacheManager;';
+}

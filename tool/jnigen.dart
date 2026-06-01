@@ -109,6 +109,9 @@ void main(List<String> args) {
         'java.io.File',
         'java.lang.Runnable',
         'java.util.UUID',
+
+        // ── Pre-cache helper ──────────────────────────────────────────────────
+        'com.anandnet.exoplayer_jni_flutter.PreCacheManager',
       ],
 
       // ── Logging ───────────────────────────────────────────────────────────

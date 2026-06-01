@@ -5,6 +5,7 @@ import 'screens/widget_external_screen.dart';
 import 'screens/custom_overlay_screen.dart';
 import 'screens/multi_player_screen.dart';
 import 'screens/playlist_screen.dart';
+import 'screens/precache_screen.dart';
 import 'screens/perf_screen.dart';
 import 'screens/lifecycle_screen.dart';
 import 'screens/error_screen.dart';
@@ -88,6 +89,14 @@ class HomeScreen extends StatelessWidget {
       icon: Icons.queue_music,
       color: Colors.pinkAccent,
       builder: (_) => const PlaylistScreen(),
+    ),
+    _TestEntry(
+      title: 'Auto Pre-Cache',
+      subtitle:
+          'autoPrecache=true pre-downloads next 2 items for instant transitions',
+      icon: Icons.download_for_offline,
+      color: Colors.tealAccent,
+      builder: (_) => const PrecacheScreen(),
     ),
     _TestEntry(
       title: 'Performance & Stress',
