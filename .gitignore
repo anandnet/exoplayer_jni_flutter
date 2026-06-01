@@ -5,9 +5,6 @@
 build/
 *.lock
 
-# Generated JNI bindings — regenerate with: dart run tool/jnigen.dart
-lib/src/exoplayer.g.dart
-
 # Android
 *.iml
 *.class
