@@ -328,6 +328,7 @@ final ctrl = ExoPlayerController();
 // 1. Always await init() before calling any playback method
 await ctrl.init(
   cacheConfig: const CacheConfig(maxBytes: 200 * 1024 * 1024),
+  handleAudioFocus: true, // auto-duck on notifications, pause on calls (default)
 );
 
 // 2. Load media
@@ -495,6 +496,7 @@ final item = MediaItemBuilder(
   artist: 'Artist Name',
   album: 'Album Title',
   mimeType: 'video/mp4',                   // optional — ExoPlayer auto-detects
+  customCacheKey: 'video-12345',           // override cache key for dynamic URLs for pre-caching & caching while playing (cache feature needs to be enabled from init())
   drmConfig: DrmConfig.widevine(
     licenseUrl: 'https://license.example.com/widevine',
     headers: {'Authorization': 'Bearer <token>'},
@@ -513,6 +515,7 @@ final item = MediaItemBuilder()
     .setArtist('Artist Name')
     .setAlbum('Album Title')                    // alias for setAlbumTitle()
     .setMimeType('video/mp4')                   // optional — ExoPlayer auto-detects
+    .setCustomCacheKey('video-12345')           // override cache key for dynamic URLs for pre-caching & caching while playing (cache feature needs to be enabled from init())
     .setDrmConfig(DrmConfig.widevine(
       licenseUrl: 'https://license.example.com/widevine',
       headers: {'Authorization': 'Bearer <token>'},
@@ -614,6 +617,18 @@ await ctrl.init(); // cacheConfig defaults to CacheConfig.none
 > automatically — if creation fails it falls back to uncached playback without
 > crashing. A cold restart (stop + relaunch) always clears the lock.
 
+### Cache status queries
+
+You can check if a file is fully or partially downloaded. Works with raw URLs or custom cache keys.
+
+```dart
+// Check if iscached (returns true if at least `contentLength` bytes exist)
+final isCached = await ctrl.isCached(urlOrKey: 'video-12345', contentLength: 5242880);
+
+// Get exact bytes cached (e.g. for a progress indicator)
+final bytes = await ctrl.getCachedBytes(urlOrKey: 'video-12345');
+```
+
 ### Auto pre-caching for playlists
 
 When playing a playlist, the controller can silently download the first N MB of
@@ -626,7 +641,7 @@ await ctrl.init(
   autoPrecacheAhead: 2,                       // download 2 items ahead
   autoPrecacheBytesPerItem: 5 * 1024 * 1024,  // 5 MB per item
 );
-ctrl.setPlaylistUrls(urls);  // background-downloads items 1 & 2 immediately
+ctrl.setPlaylistUrls(urls, cacheKeys: keys);  // background-downloads items 1 & 2 immediately
 ```
 
 | `init()` param | Default | Description |

@@ -125,6 +125,7 @@ class ExoPlayerController extends ChangeNotifier {
   int _autoPrecacheAhead = 2;
   int _autoPrecacheBytesPerItem = 3 * 1024 * 1024; // 3 MB default
   List<String> _playlistUrls = const [];
+  List<String?> _playlistCacheKeys = const [];
 
   // ── JNI listener (stored so it can be removed before player release) ──────
   Player$Listener? _listener;
@@ -192,6 +193,11 @@ class ExoPlayerController extends ChangeNotifier {
     /// eliminate the cold-start buffering delay on item transitions.
     /// Pass 0 to cache the entire file (suitable for audio).
     int autoPrecacheBytesPerItem = 3 * 1024 * 1024,
+
+    /// Whether ExoPlayer should handle Android audio focus automatically.
+    /// When `true` (default), ExoPlayer pauses on phone calls, ducks for
+    /// notifications, and releases focus when playback stops.
+    bool handleAudioFocus = true,
   }) async {
     if (_player != null) return;
 
@@ -275,6 +281,28 @@ class ExoPlayerController extends ChangeNotifier {
       // ── Attach listener ───────────────────────────────────────────────────
       _listener = _buildListener();
       _player!.addListener(_listener!);
+
+      // ── Audio focus ────────────────────────────────────────────────────────
+      if (handleAudioFocus) {
+        try {
+          _initAudioAttributesIds();
+          // Build AudioAttributes(CONTENT_TYPE_MUSIC, USAGE_MEDIA)
+          final builder = _audioAttrBuilderCtor!.call<JObject>(
+            _audioAttributesBuilderClass!, []);
+          // C.AUDIO_CONTENT_TYPE_MUSIC = 2, C.USAGE_MEDIA = 1
+          _audioAttrSetContentType!.call<JObject, JObject>(
+            builder, JObject.type, [2]);
+          _audioAttrSetUsage!.call<JObject, JObject>(
+            builder, JObject.type, [1]);
+          final audioAttrs = _audioAttrBuild!.call<JObject, JObject>(
+            builder, JObject.type, []);
+          _player!.setAudioAttributes(audioAttrs, true);
+          audioAttrs.release();
+          builder.release();
+        } catch (_) {
+          // Best-effort — audio focus not critical for playback.
+        }
+      }
     });
 
     // Apply track selector parameters if provided
@@ -356,11 +384,28 @@ class ExoPlayerController extends ChangeNotifier {
   /// Equivalent to building [MediaItem]s manually and calling [setPlaylist],
   /// but also stores the URL list so the auto pre-cache window can advance
   /// as playback progresses.
-  void setPlaylistUrls(List<String> urls) {
+  ///
+  /// [cacheKeys] — optional list of stable identifiers (e.g. song IDs) used
+  /// as cache keys. When provided, each entry decouples the cache identity
+  /// from the raw URL so dynamic/tokenised URLs still hit the cache. The
+  /// list length must match [urls] if provided.
+  void setPlaylistUrls(List<String> urls, {List<String?>? cacheKeys}) {
     _assertInitialized();
+    assert(
+      cacheKeys == null || cacheKeys.length == urls.length,
+      'cacheKeys length must match urls length',
+    );
     _playlistUrls = List.unmodifiable(urls);
-    final items =
-        urls.map((url) => MediaItemBuilder().setUri(url).build()).toList();
+    _playlistCacheKeys = cacheKeys != null
+        ? List.unmodifiable(cacheKeys)
+        : List.filled(urls.length, null);
+    final items = List.generate(urls.length, (i) {
+      final b = MediaItemBuilder().setUri(urls[i]);
+      if (cacheKeys != null && cacheKeys[i] != null) {
+        b.setCustomCacheKey(cacheKeys[i]!);
+      }
+      return b.build();
+    });
     _runOnMainThread(() {
       final jList = JArrayList<MediaItem>();
       try {
@@ -510,16 +555,60 @@ class ExoPlayerController extends ChangeNotifier {
   // ── PreCacheManager raw JNI (no regen needed) ─────────────────────────────
   static JClass? _preCacheManagerClass;
   static JStaticMethodId? _createCachedMediaSourceFactoryMethod;
+  static JStaticMethodId? _isCachedMethod;
+  static JStaticMethodId? _getCachedBytesMethod;
+  static JStaticMethodId? _preCacheUrlMethod;
+
+  // ── AudioAttributes raw JNI ─────────────────────────────────────────────────
+  static JClass? _audioAttributesBuilderClass;
+  static JConstructorId? _audioAttrBuilderCtor;
+  static JInstanceMethodId? _audioAttrSetContentType;
+  static JInstanceMethodId? _audioAttrSetUsage;
+  static JInstanceMethodId? _audioAttrBuild;
 
   static void _initPreCacheManagerIds() {
     if (_preCacheManagerClass != null) return;
-    _preCacheManagerClass = JClass.forName(
-        'com/anandnet/exoplayer_jni_flutter/PreCacheManager');
+    _preCacheManagerClass =
+        JClass.forName('com/anandnet/exoplayer_jni_flutter/PreCacheManager');
     _createCachedMediaSourceFactoryMethod =
         _preCacheManagerClass!.staticMethodId(
       'createCachedMediaSourceFactory',
       '(Landroid/content/Context;Landroidx/media3/datasource/cache/SimpleCache;)'
           'Landroidx/media3/exoplayer/source/DefaultMediaSourceFactory;',
+    );
+    _isCachedMethod = _preCacheManagerClass!.staticMethodId(
+      'isCached',
+      '(Landroidx/media3/datasource/cache/SimpleCache;Ljava/lang/String;J)Z',
+    );
+    _getCachedBytesMethod = _preCacheManagerClass!.staticMethodId(
+      'getCachedBytes',
+      '(Landroidx/media3/datasource/cache/SimpleCache;Ljava/lang/String;)J',
+    );
+    _preCacheUrlMethod = _preCacheManagerClass!.staticMethodId(
+      'preCacheUrl',
+      '(Landroidx/media3/datasource/cache/SimpleCache;'
+          'Ljava/lang/String;JLjava/lang/String;)V',
+    );
+  }
+
+  static void _initAudioAttributesIds() {
+    if (_audioAttributesBuilderClass != null) return;
+    _audioAttributesBuilderClass = JClass.forName(
+        'androidx/media3/common/AudioAttributes\$Builder');
+    _audioAttrBuilderCtor =
+        _audioAttributesBuilderClass!.constructorId('()V');
+    _audioAttrSetContentType =
+        _audioAttributesBuilderClass!.instanceMethodId(
+      'setContentType',
+      '(I)Landroidx/media3/common/AudioAttributes\$Builder;',
+    );
+    _audioAttrSetUsage = _audioAttributesBuilderClass!.instanceMethodId(
+      'setUsage',
+      '(I)Landroidx/media3/common/AudioAttributes\$Builder;',
+    );
+    _audioAttrBuild = _audioAttributesBuilderClass!.instanceMethodId(
+      'build',
+      '()Landroidx/media3/common/AudioAttributes;',
     );
   }
 
@@ -871,16 +960,76 @@ class ExoPlayerController extends ChangeNotifier {
         (currentIndex + _autoPrecacheAhead).clamp(0, _playlistUrls.length - 1);
     for (int i = currentIndex + 1; i <= end; i++) {
       final url = _playlistUrls[i];
+      final cacheKey = (i < _playlistCacheKeys.length)
+          ? _playlistCacheKeys[i]
+          : null;
       _runOnMainThread(() {
         if (_disposed) return;
+        _initPreCacheManagerIds();
         final jUrl = url.toJString();
+        final jKey = cacheKey?.toJString();
         try {
-          PreCacheManager.preCacheUrl(cache, jUrl, _autoPrecacheBytesPerItem);
+          _preCacheUrlMethod!.call<jvoid, void>(
+            _preCacheManagerClass!,
+            jvoid.type,
+            [cache, jUrl, _autoPrecacheBytesPerItem, jKey ?? jUrl],
+          );
         } finally {
-          jUrl.release(); // release Dart-side JNI ref after Java has taken its own copy
+          jUrl.release();
+          jKey?.release();
         }
       });
     }
+  }
+
+  // ── Cache status queries ──────────────────────────────────────────────────
+
+  /// Returns `true` if the media identified by [urlOrKey] is fully cached.
+  ///
+  /// [urlOrKey] is the URL or the custom cache key you passed via
+  /// [MediaItemBuilder.setCustomCacheKey] / [setPlaylistUrls]'s `cacheKeys`.
+  ///
+  /// [contentLength] is the expected file size in bytes. Pass `0` if unknown
+  /// — the method then returns `true` if *any* bytes are cached.
+  Future<bool> isCached({required String urlOrKey, int contentLength = 0}) async {
+    if (_sharedCache == null) return false;
+    _initPreCacheManagerIds();
+    bool result = false;
+    await _runOnMainThread(() {
+      final jKey = urlOrKey.toJString();
+      try {
+        result = _isCachedMethod!.call<jboolean, bool>(
+          _preCacheManagerClass!,
+          jboolean.type,
+          [_sharedCache!, jKey, contentLength],
+        );
+      } finally {
+        jKey.release();
+      }
+    });
+    return result;
+  }
+
+  /// Returns the total number of cached bytes for [urlOrKey].
+  ///
+  /// [urlOrKey] is the URL or the custom cache key.
+  Future<int> getCachedBytes({required String urlOrKey}) async {
+    if (_sharedCache == null) return 0;
+    _initPreCacheManagerIds();
+    int result = 0;
+    await _runOnMainThread(() {
+      final jKey = urlOrKey.toJString();
+      try {
+        result = _getCachedBytesMethod!.call<jlong, int>(
+          _preCacheManagerClass!,
+          jlong.type,
+          [_sharedCache!, jKey],
+        );
+      } finally {
+        jKey.release();
+      }
+    });
+    return result;
   }
 
   // ── Dispose ───────────────────────────────────────────────────────────────

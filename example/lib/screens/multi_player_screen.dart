@@ -77,6 +77,7 @@ class _MultiPlayerScreenState extends State<MultiPlayerScreen> {
         maxBufferMs: 8000,
         bufferForPlaybackMs: 500,
         bufferForPlaybackAfterRebufferMs: 1000,
+        handleAudioFocus: false, // Prevent players from stealing focus from each other
       );
       c.setMediaUrl(url);
       c.play();

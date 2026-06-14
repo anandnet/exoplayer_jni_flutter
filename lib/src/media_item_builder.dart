@@ -40,6 +40,7 @@ class MediaItemBuilder {
   String? _artist;
   String? _albumTitle;
   String? _artworkUri;
+  String? _customCacheKey;
   DrmConfig? _drmConfig;
   final Map<String, String> _httpHeaders = {};
   Duration? _clipStart;
@@ -56,6 +57,7 @@ class MediaItemBuilder {
     String? mimeType,
     String? mediaId,
     String? artworkUri,
+    String? customCacheKey,
     DrmConfig? drmConfig,
     Map<String, String>? httpHeaders,
     Duration? clipStart,
@@ -67,6 +69,7 @@ class MediaItemBuilder {
         _mimeType = mimeType,
         _mediaId = mediaId,
         _artworkUri = artworkUri,
+        _customCacheKey = customCacheKey,
         _drmConfig = drmConfig,
         _clipStart = clipStart,
         _clipEnd = clipEnd {
@@ -111,6 +114,16 @@ class MediaItemBuilder {
     return this;
   }
 
+  /// Sets a custom cache key for this media item.
+  ///
+  /// Use this when the media URL contains dynamic tokens or expiry parameters
+  /// (e.g. signed CDN URLs) so that the cache persists correctly across URL
+  /// changes. Typically set to a stable identifier like a song/video ID.
+  MediaItemBuilder setCustomCacheKey(String key) {
+    _customCacheKey = key;
+    return this;
+  }
+
   MediaItemBuilder setDrmConfig(DrmConfig config) {
     _drmConfig = config;
     return this;
@@ -150,11 +163,18 @@ class MediaItemBuilder {
       itemBuilder.setMediaId(_mediaId!.toJString());
     }
 
+    // Custom cache key — decouples cache identity from the raw URL.
+    if (_customCacheKey != null) {
+      itemBuilder.setCustomCacheKey(_customCacheKey!.toJString());
+    }
+
     // Build and attach MediaMetadata
     final metaBuilder = MediaMetadata$Builder();
     if (_title != null) metaBuilder.setTitle(_title!.toJString());
     if (_artist != null) metaBuilder.setArtist(_artist!.toJString());
-    if (_albumTitle != null) metaBuilder.setAlbumTitle(_albumTitle!.toJString());
+    if (_albumTitle != null) {
+      metaBuilder.setAlbumTitle(_albumTitle!.toJString());
+    }
     if (_artworkUri != null) {
       metaBuilder.setArtworkUri(Uri.parse(_artworkUri!.toJString()));
     }
@@ -213,5 +233,4 @@ class MediaItemBuilder {
 }
 
 /// Convenience: create a [MediaItem] from a plain URL string.
-MediaItem simpleMediaItem(String url) =>
-    MediaItemBuilder().setUri(url).build();
+MediaItem simpleMediaItem(String url) => MediaItemBuilder().setUri(url).build();

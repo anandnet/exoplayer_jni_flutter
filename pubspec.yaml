@@ -2,7 +2,7 @@ name: exoplayer_jni_flutter
 description: >
   Flutter FFI plugin providing full ExoPlayer (Media3) access from Dart via JNIgen.
   Generates type-safe Dart bindings for androidx.media3 classes using package:jnigen.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/anandnet/exoplayer_jni_flutter
 
 environment:
